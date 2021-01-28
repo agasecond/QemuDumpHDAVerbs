@@ -8,7 +8,7 @@ Tools to dump audio codec(s) init and working verbs from Windows drivers
 
 2.Your CPU should fully support ACS if you don't want to worry about IOMMU groupings.
 
-3.Grab Ubuntu 20.10 https://ubuntu.com/#download and create bootable flash drive(for windows I recommend using rufus https://rufus.ie/ for it)
+3.Grab Ubuntu 20.10 https://ubuntu.com/#download and create bootable flash drive(for windows I recommend using rufus https://rufus.ie/ for it), dont forget to turn safeboot off.
 
 4.Install it and update packages # sudo apt update && sudo apt upgrade -y
 
