@@ -1,0 +1,122 @@
+diff --git a/hw/vfio/common.c b/hw/vfio/common.c
+index 6ff1daa..5ead3af 100644
+--- a/hw/vfio/common.c
++++ b/hw/vfio/common.c
+@@ -176,6 +176,13 @@ int vfio_set_irq_signaling(VFIODevice *vbasedev, int index, int subindex,
+     return ret;
+ }
+ 
++uint64_t corbbase = 0;
++uint64_t rirbbase = 0;
++uint64_t last_corbwp = 0;
++uint64_t last_rirbwp = 0;
++uint64_t corbs[1000] = { 0 };
++uint64_t rirbs[1000] = { 0 };
++
+ /*
+  * IO Port/MMIO - Beware of the endians, VFIO is always little endian
+  */
+@@ -209,6 +216,49 @@ void vfio_region_write(void *opaque, hwaddr addr,
+         break;
+     }
+ 
++
++    if (region->nr == 0 && addr == 0x40) {
++        printf("CORBLBASE write of 0x%" PRIx64 "\n", data);
++        if (size == 8) {
++            corbbase = data;
++        } else {
++            corbbase = (corbbase & 0xffffffff00000000) | (data & 0xffffffff);
++        }
++    } else if (region->nr == 0 && addr == 0x44) {
++        printf("CORBUBASE write of 0x%" PRIx64 "\n", data);
++        corbbase = (data << 32) | (corbbase & 0xffffffff);
++    } else if (region->nr == 0 && addr == 0x50) {
++        printf("RIRBLBASE write of 0x%" PRIx64 "\n", data);
++        if (size == 8) {
++            rirbbase = data;
++        } else {
++            rirbbase = (rirbbase & 0xffffffff00000000) | (data & 0xffffffff);
++        }
++    } else if (region->nr == 0 && addr == 0x54) {
++        printf("RIRBUBASE write of 0x%" PRIx64 "\n", data);
++        rirbbase = (data << 32) | (rirbbase & 0xffffffff);
++    } else if (region->nr == 0 && addr == 0x48) {
++        uint8_t buf[16];
++        uint64_t x;
++
++        printf("CORBWP advance to %ld, last WP %ld\n", data, last_corbwp);
++
++        for (x = last_corbwp + 1; x <= data; x++) {
++            uint64_t dmaaddr = corbbase + (x * 4);
++
++            cpu_physical_memory_read(dmaaddr, buf, 4);
++            corbs[x] = (uint32_t)ldl_p(buf);
++
++            printf("CORB[%ld] = 0x%" PRIx64 " (caddr:0x%lx nid:0x%lx "
++                "control:0x%lx param:0x%lx)\n",
++                x,
++                corbs[x],
++                ((corbs[x] >> 28) & 0xf), ((corbs[x] >> 20) & 0x7f),
++                ((corbs[x] >> 8) & 0xfff), (corbs[x] & 0xff));
++        }
++        last_corbwp = data;
++    }
++
+     if (pwrite(vbasedev->fd, &buf, size, region->fd_offset + addr) != size) {
+         error_report("%s(%s:region%d+0x%"HWADDR_PRIx", 0x%"PRIx64
+                      ",%d) failed: %m",
+@@ -266,6 +316,31 @@ uint64_t vfio_region_read(void *opaque,
+         break;
+     }
+ 
++    if (region->nr == 0 && addr == 0x58) {
++        uint8_t buf[16];
++        uint64_t x;
++
++        printf("RIRBWP advance to %ld, last WP %ld\n", data, last_rirbwp);
++
++        for (x = last_rirbwp + 1; x <= data; x++) {
++            uint64_t dmaaddr = rirbbase + (x * 8);
++
++            cpu_physical_memory_read(dmaaddr, buf, 4);
++            rirbs[x] = (uint32_t)ldl_p(buf);
++
++            printf("CORB caddr:0x%lx nid:0x%lx control:0x%lx param:0x%lx "
++                "response:0x%lx",
++                ((corbs[x] >> 28) & 0xf), ((corbs[x] >> 20) & 0x7f),
++                ((corbs[x] >> 8) & 0xfff), (corbs[x] & 0xff),
++                rirbs[x]);
++
++            cpu_physical_memory_read(dmaaddr + 4, buf, 4);
++            printf(" (ex 0x%x)\n", (uint32_t)ldl_p(buf));
++        }
++        last_rirbwp = data;
++    }
++
++
+     trace_vfio_region_read(vbasedev->name, region->nr, addr, size, data);
+ 
+     /* Same as write above */
+diff --git a/hw/vfio/pci.c b/hw/vfio/pci.c
+index f74be78..44690a6 100644
+--- a/hw/vfio/pci.c
++++ b/hw/vfio/pci.c
+@@ -3191,7 +3191,7 @@ static Property vfio_pci_dev_properties[] = {
+     DEFINE_PROP_UINT32("xres", VFIOPCIDevice, display_xres, 0),
+     DEFINE_PROP_UINT32("yres", VFIOPCIDevice, display_yres, 0),
+     DEFINE_PROP_UINT32("x-intx-mmap-timeout-ms", VFIOPCIDevice,
+-                       intx.mmap_timeout, 1100),
++                       intx.mmap_timeout, 0),
+     DEFINE_PROP_BIT("x-vga", VFIOPCIDevice, features,
+                     VFIO_FEATURE_ENABLE_VGA_BIT, false),
+     DEFINE_PROP_BIT("x-req", VFIOPCIDevice, features,
+@@ -3200,7 +3200,7 @@ static Property vfio_pci_dev_properties[] = {
+                     VFIO_FEATURE_ENABLE_IGD_OPREGION_BIT, false),
+     DEFINE_PROP_BOOL("x-enable-migration", VFIOPCIDevice,
+                      vbasedev.enable_migration, false),
+-    DEFINE_PROP_BOOL("x-no-mmap", VFIOPCIDevice, vbasedev.no_mmap, false),
++    DEFINE_PROP_BOOL("x-no-mmap", VFIOPCIDevice, vbasedev.no_mmap, true),
+     DEFINE_PROP_BOOL("x-balloon-allowed", VFIOPCIDevice,
+                      vbasedev.ram_block_discard_allowed, false),
+     DEFINE_PROP_BOOL("x-no-kvm-intx", VFIOPCIDevice, no_kvm_intx, false),
