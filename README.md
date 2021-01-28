@@ -26,7 +26,8 @@ Tools to dump audio codec(s) init and working verbs from Windows drivers
 
 11.Now it is time to check if we set it up correctly. Update GRUB \# sudo update-grub and reboot. Once again, it is important that you boot to kernel with -acs suffix as mentioned above in p. 7
 
-12.Check that your sound card are the only device bound to specific IOMMU group. \#for dp in \((find /sys/kernel/iommu_groups/*/devices/*); do ploc=\)(basename \(dp | sed 's/0000://'); igrp=\)(echo \$dp | awk -F/ '{print \(5}'); dinfo=\)(lspci -nn | grep -E "\^\(ploc"); echo "[IOMMU \)igrp] \$dinfo" ; done
+12.Check that your sound card are the only device bound to specific IOMMU group. \#for dp in $(find /sys/kernel/iommu_groups/*/devices/*); do ploc=$(basename $dp | sed 's/0000://'); igrp=$(echo $dp | awk -F/ '{print $5}'); dinfo=$(lspci -nn | grep -E "^$ploc"); echo "[IOMMU $igrp] $dinfo" ; done 
+
 
     Example output:
 
