@@ -60,7 +60,7 @@ Tools to dump audio codec(s) init and working verbs from Windows drivers
 
 14.Apply vfio.patch from this repo. Copy patch to qemu git root folder you just cloned and # git apply vfio.patch
 
-15.Install dependencies # sudo apt install libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev libnfs-dev libiscsi-dev 
+15.Install dependencies # sudo apt install build-essential libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev libnfs-dev libiscsi-dev 
 
 16.Configure it with 
     # ./configure \
