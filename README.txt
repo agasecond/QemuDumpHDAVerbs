@@ -12,8 +12,9 @@ Tools to dump audio codec(s) init and working verbs from Windows drivers
 
 4.Install it and update packages # sudo apt update && sudo apt upgrade -y
 
-5.Download custom patched kernel with ACS support(on moment of publication it is 5.10.4), it allows you to pass devices to VM one by one.
+5.Download custom patched prebuild kernel with ACS support(on the moment of publication it is 5.10.4), it allows you to pass devices to VM one by one.
     https://gitlab.com/Queuecumber/linux-acs-override/-/jobs/940850127/artifacts/download
+    There is no need to build it, just download deb packets.
 
 6.Install new kernel with sudo dpkg -i *.deb and reboot afterwards.
 
