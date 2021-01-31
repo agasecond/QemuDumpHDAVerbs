@@ -75,6 +75,7 @@ Tools to dump audio codec(s) init and working verbs from Windows drivers
 19.Download Windows install ISO image and put it together with newly created disk image.
 
 20.Boot up vm and install Windows as usually #qemu-system-x86_64 -enable-kvm -hda win.img -cdrom Windows10_x64_en-us_21286.iso -m 4G -smp 4
+On some hardware it start vnc server and you will have to open remmina and connect to it by enter ip address showed in output.
 
 21.After installation turn off VM.
 
